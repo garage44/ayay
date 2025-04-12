@@ -153,54 +153,39 @@ async function processRepository(repoPath, isSubmodule = false) {
 async function processSubmodule(submodulePath) {
   try {
     console.log(`\nProcessing submodule: ${submodulePath}`)
-    const originalDir = process.cwd()
 
-    try {
-      // Change to submodule directory
-      process.chdir(submodulePath)
+    // Create git instance with path - no need to change directory
+    const git = simpleGit({
+      baseDir: submodulePath,
+      ...gitConfig,
+    })
 
-      // Initialize simple-git with configuration options
-      const git = simpleGit({
-        baseDir: submodulePath,
-        ...gitConfig,
-      })
-
-      // Check if there are any changes
-      const status = await git.status()
-      if (status.isClean()) {
-          console.log('No changes in this submodule');
-          return
-      }
-
-      // Get the diff for commit message generation
-      const diff = await git.diff()
-      // Stage all changes
-      await git.add('.')
-      // Generate commit message using Anthropic
-      const commitMessage = await generateCommitMessage(diff)
-
-      // Create commit with better error handling
-      try {
-        console.log(`Attempting to commit with message: "${commitMessage}"`)
-
-        // No need to check git user configuration separately
-        // simple-git will use the system's git configuration
-
-        await git.commit(commitMessage)
-      } catch (commitError) {
-        console.error('Git commit failed with error:')
-        console.error(commitError.message)
-        throw commitError
-      }
-
-      // Push changes to remote
-      await git.push('origin', 'main')
-      console.log('Successfully committed and pushed changes')
-    } finally {
-      // Always return to original directory
-      process.chdir(originalDir)
+    // Check if there are any changes
+    const status = await git.status()
+    if (status.isClean()) {
+        console.log(`No changes in submodule: ${submodulePath}`);
+        return
     }
 
+    // Get the diff for commit message generation
+    const diff = await git.diff()
+    // Stage all changes
+    await git.add('.')
+    // Generate commit message using Anthropic
+    const commitMessage = await generateCommitMessage(diff)
+
+    // Create commit with better error handling
+    try {
+      console.log(`Committing changes in ${submodulePath}: "${commitMessage}"`)
+      await git.commit(commitMessage)
+    } catch (commitError) {
+      console.error(`Git commit failed in ${submodulePath}:`, commitError.message)
+      throw commitError
+    }
+
+    // Push changes to remote
+    await git.push('origin', 'main')
+    console.log(`Successfully committed and pushed changes in ${submodulePath}`)
   } catch (error) {
     console.error(`Error processing submodule ${submodulePath}:`, error)
   }
@@ -224,20 +209,21 @@ async function main() {
       .filter(dir => fs.statSync(dir).isDirectory())
 
     // Process all submodules in parallel
-    console.log('\nProcessing submodules in parallel...')
-    await Promise.all(submodules.map(async (submodule) => {
-        await processSubmodule(submodule)
-        process.chdir(rootDir) // Return to root directory after each submodule
-    }))
+    console.log(`\nProcessing ${submodules.length} submodules in parallel...`)
 
-    console.log('\nAll submodules processed successfully!')
+    // Execute all submodule operations completely in parallel
+    await Promise.all(
+      submodules.map(submodule => processSubmodule(submodule))
+    );
+
+    console.log('\nAll submodules processed in parallel successfully!')
 
     // Now process the main repository to track submodule updates
     await processRepository(rootDir, false)
 
   } catch (error) {
-      console.error('Error:', error)
-      process.exit(1)
+    console.error('Error:', error)
+    process.exit(1)
   }
 }
 
