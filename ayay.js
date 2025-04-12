@@ -54,7 +54,7 @@ async function generateCommitMessage(diff) {
       })
 
       if (!response.ok) {
-          throw new Error(`API request failed with status ${response.status}`);
+          throw new Error(`api request failed with status ${response.status}`);
       }
 
       const data = await response.json()
@@ -62,7 +62,7 @@ async function generateCommitMessage(diff) {
       console.log(`${icons.commit} ${pc.bold(`Commit message: ${pc.cyan(message)}`)}`)
       return message
   } catch (error) {
-      console.error(`${icons.error} ${pc.red('Error generating commit message:')} ${error.message}`);
+      console.error(`${icons.error} ${pc.red('error generating commit message:')} ${error.message}`);
       return 'chore: update submodule changes'
   }
 }
@@ -71,7 +71,7 @@ async function processRepository(repoPath, isSubmodule = false) {
   try {
       const repoType = isSubmodule ? 'submodule' : 'repository'
       const repoName = path.basename(repoPath)
-      console.log(`\n${icons.important} ${pc.bold(`Processing ${repoType}: ${repoName}`)}`);
+      console.log(`\n${icons.important} ${pc.bold(`processing ${repoType}: ${repoName}`)}`);
 
       // Initialize simple-git with configuration options
       const git = simpleGit({
@@ -81,7 +81,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // For main repository, update submodule references
       if (!isSubmodule) {
-          console.log(pc.dim('Updating submodule references...'))
+          console.log(pc.dim('updating submodule references...'))
 
           // Get list of submodules
           const submoduleResult = await git.raw(['submodule', 'status'])
@@ -97,7 +97,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
           // Process each submodule in parallel
           if (submoduleList.length > 0) {
-            console.log(pc.dim(`Found ${submoduleList.length} submodules to update`))
+            console.log(pc.dim(`found ${submoduleList.length} submodules to update`))
 
             // Process all submodules in parallel using Promise.all
             await Promise.all(submoduleList.map(async (submodulePath) => {
@@ -109,20 +109,20 @@ async function processRepository(repoPath, isSubmodule = false) {
                 // Checkout main and pull changes
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
-                console.log(`${icons.success} ${pc.dim(`Submodule ${subName} updated successfully`)}`)
+                console.log(`${icons.success} ${pc.dim(`submodule updated successfully: ${subName} `)}`)
               } catch (submoduleError) {
-                console.error(`${icons.error} ${pc.red(`Error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
+                console.error(`${icons.error} ${pc.red(`error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
               }
             }));
           } else {
-            console.log(pc.dim('No submodules found to update'))
+            console.log(pc.dim('no submodules found to update'))
           }
       }
 
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(pc.dim(`No changes in ${repoType} ${repoName}`))
+          console.log(pc.dim(`- no changes in ${repoType} ${repoName}`))
           return
       }
 
@@ -131,36 +131,36 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // Get files that have been changed
       const summary = await git.diffSummary()
-      console.log(pc.dim(`Changes detected in ${summary.files.length} files`))
+      console.log(pc.dim(`changes detected in ${summary.files.length} files`))
 
       // Stage all changes
       await git.add('.')
-      console.log(pc.dim('All changes staged for commit'))
+      console.log(pc.dim('all changes staged for commit'))
 
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
 
       // Create commit with better error handling
       try {
-          console.log(`${icons.commit} ${pc.bold(`Creating commit in ${repoName}...`)}`)
+          console.log(`${icons.commit} ${pc.bold(`creating commit in ${repoName}...`)}`)
           await git.commit(commitMessage)
       } catch (commitError) {
-          console.error(`${icons.error} ${pc.red('Git commit failed:')} ${commitError.message}`)
+          console.error(`${icons.error} ${pc.red('git commit failed:')} ${commitError.message}`)
           throw commitError
       }
 
       // Push changes to remote
-      console.log(`${icons.push} ${pc.bold(`Pushing changes to remote...`)}`)
+      console.log(`${icons.push} ${pc.bold(`pushing changes to remote...`)}`)
       await git.push('origin', 'main')
   } catch (error) {
-      console.error(`${icons.error} ${pc.red(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${path.basename(repoPath)}:`)} ${error.message}`)
+      console.error(`${icons.error} ${pc.red(`error processing ${isSubmodule ? 'submodule' : 'repository'} ${path.basename(repoPath)}:`)} ${error.message}`)
   }
 }
 
 async function processSubmodule(submodulePath) {
   try {
       const subName = path.basename(submodulePath)
-      console.log(`${icons.important} ${pc.bold(`Processing submodule: ${subName}`)}`);
+      console.log(`${icons.important} ${pc.bold(`processing submodule: ${subName}`)}`);
 
       // Create git instance with path - no need to change directory
       const git = simpleGit({baseDir: submodulePath, ...gitConfig})
@@ -168,7 +168,7 @@ async function processSubmodule(submodulePath) {
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(pc.dim(`- No changes in submodule: ${subName}`))
+          console.log(pc.dim(`- no changes in submodule: ${subName}`))
           return
       }
 
@@ -177,7 +177,7 @@ async function processSubmodule(submodulePath) {
 
       // Show changed files
       const summary = await git.diffSummary()
-      console.log(pc.dim(`- Changes found in ${summary.files.length} files:`))
+      console.log(pc.dim(`- changes found in ${summary.files.length} files:`))
       summary.files.slice(0, 5).forEach(file => {
           console.log(pc.dim(`    • ${file.file} (${file.insertions}+ ${file.deletions}-)`))
       })
@@ -187,32 +187,32 @@ async function processSubmodule(submodulePath) {
 
       // Stage all changes
       await git.add('.')
-      console.log(pc.dim('All changes staged for commit'))
+      console.log(pc.dim('all changes staged for commit'))
 
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
       // Create commit with better error handling
       try {
-          console.log(`${icons.commit} ${pc.bold(`Creating commit in ${subName}...`)}`)
+          console.log(`${icons.commit} ${pc.bold(`creating commit in ${subName}...`)}`)
           await git.commit(commitMessage)
-          console.log(`${icons.success} ${pc.green('Commit created successfully')}`)
+          console.log(`${icons.success} ${pc.green('commit created successfully')}`)
       } catch (commitError) {
-          console.error(`${icons.error} ${pc.red(`Git commit failed in ${subName}:`)} ${commitError.message}`)
+          console.error(`${icons.error} ${pc.red(`git commit failed in ${subName}:`)} ${commitError.message}`)
           throw commitError
       }
 
       // Push changes to remote
-      console.log(`${icons.push} ${pc.bold(`Pushing changes to remote...`)}`)
+      console.log(`${icons.push} ${pc.bold(`pushing changes to remote...`)}`)
       await git.push('origin', 'main')
-      console.log(`${icons.success} ${pc.bold(pc.green(`Changes in ${subName} committed and pushed successfully`))}`)
+      console.log(`${icons.success} ${pc.bold(pc.green(`changes in ${subName} committed and pushed successfully`))}`)
   } catch (error) {
-      console.error(`${icons.error} ${pc.red(`Error processing submodule ${path.basename(submodulePath)}:`)} ${error.message}`)
+      console.error(`${icons.error} ${pc.red(`error processing submodule ${path.basename(submodulePath)}:`)} ${error.message}`)
   }
 }
 
 async function main() {
   try {
-    console.log(`\n${icons.final} ${pc.bold(pc.green('AyAy, let\'s get started...'))}`)
+    console.log(`\n${icons.final} ${pc.bold(pc.green('ayay, let\'s get started...'))}`)
 
     // Get the root directory
     const rootDir = process.cwd()
@@ -220,7 +220,7 @@ async function main() {
 
     // Check if packages directory exists
     if (!fs.existsSync(packagesDir)) {
-        console.error(`${icons.error} ${pc.red('Packages directory not found!')}`)
+        console.error(`${icons.error} ${pc.red('packages directory not found!')}`)
         process.exit(1)
     }
 
@@ -234,7 +234,7 @@ async function main() {
     // Now process the main repository to track submodule updates
     await processRepository(rootDir, false)
 
-    console.log(`\n${icons.final} ${pc.bold(pc.green('AyAy, we\'re all set!'))}`);
+    console.log(`\n${icons.final} ${pc.bold(pc.green('ayay, we\'re all set!'))}`);
   } catch (error) {
     console.error(`\n${icons.error} ${pc.bold(pc.red('Error:'))} ${error.message}`)
     process.exit(1)
