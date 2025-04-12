@@ -57,6 +57,12 @@ async function processRepository(repoPath, isSubmodule = false) {
       // Change to repository directory
       process.chdir(repoPath)
 
+      // For main repository, update submodule references
+      if (!isSubmodule) {
+          console.log('Updating submodule references...')
+          execSync('git submodule update --remote --merge', { stdio: 'inherit' })
+      }
+
       // Check if there are any changes
       const status = execSync('git status --porcelain').toString()
       if (!status) {
@@ -113,9 +119,6 @@ async function main() {
     const rootDir = process.cwd()
     const packagesDir = path.join(rootDir, 'packages')
 
-    // First process the main repository
-    await processRepository(rootDir, false)
-
     // Check if packages directory exists
     if (!fs.existsSync(packagesDir)) {
       console.error('Packages directory not found!')
@@ -127,13 +130,16 @@ async function main() {
       .map(name => path.join(packagesDir, name))
       .filter(dir => fs.statSync(dir).isDirectory())
 
-    // Process each submodule
+    // Process each submodule first
     for (const submodule of submodules) {
       await processSubmodule(submodule)
       process.chdir(rootDir) // Return to root directory
     }
 
     console.log('\nAll submodules processed successfully!')
+
+    // Now process the main repository to track submodule updates
+    await processRepository(rootDir, false)
 
   } catch (error) {
     console.error('Error:', error)
