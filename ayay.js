@@ -84,19 +84,16 @@ async function processRepository(repoPath, isSubmodule = false) {
             })
             .filter(Boolean)
 
-          // Process each submodule individually
+          // Process each submodule in parallel
           if (submoduleList.length > 0) {
             console.log(`Found ${submoduleList.length} submodules to update`)
 
-            for (const submodulePath of submoduleList) {
+            // Process all submodules in parallel using Promise.all
+            await Promise.all(submoduleList.map(async (submodulePath) => {
               try {
                 console.log(`Updating submodule: ${submodulePath}`)
 
-                // Move into the submodule directory
-                const originalDir = process.cwd()
-                process.chdir(path.join(repoPath, submodulePath))
-
-                // Initialize simple-git with configuration options
+                // Create git instance with path - no need to change directory
                 const submoduleGit = simpleGit({
                   baseDir: path.join(repoPath, submodulePath),
                   ...gitConfig,
@@ -106,13 +103,11 @@ async function processRepository(repoPath, isSubmodule = false) {
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
 
-                // Return to the original directory
-                process.chdir(originalDir)
                 console.log(`Successfully updated submodule: ${submodulePath}`)
               } catch (submoduleError) {
                 console.error(`Error updating submodule ${submodulePath}:`, submoduleError)
               }
-            }
+            }));
           } else {
             console.log('No submodules found to update')
           }
