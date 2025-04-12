@@ -146,7 +146,6 @@ async function processRepository(repoPath, isSubmodule = false) {
       try {
           console.log(`${icons.commit} ${pc.bold(`Creating commit in ${repoName}...`)}`)
           await git.commit(commitMessage)
-          console.log(`${icons.success} ${pc.green('Commit created successfully')}`)
       } catch (commitError) {
           console.error(`${icons.error} ${pc.red('Git commit failed:')} ${commitError.message}`)
           throw commitError
@@ -155,7 +154,6 @@ async function processRepository(repoPath, isSubmodule = false) {
       // Push changes to remote
       console.log(`${icons.push} ${pc.bold(`Pushing changes to remote...`)}`)
       await git.push('origin', 'main')
-      console.log(`${icons.success} ${pc.bold(pc.green(`Changes in ${repoName} committed and pushed successfully`))}`)
   } catch (error) {
       console.error(`${icons.error} ${pc.red(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${path.basename(repoPath)}:`)} ${error.message}`)
   }
@@ -172,7 +170,7 @@ async function processSubmodule(submodulePath) {
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(pc.dim(`No changes in submodule ${subName}`))
+          console.log(pc.dim(`- No changes in submodule ${subName}`))
           return
       }
 
@@ -237,8 +235,6 @@ async function main() {
     console.log(pc.dim(`Processing ${submodules.length} submodules in parallel...`))
     // Execute all submodule operations completely in parallel
     await Promise.all(submodules.map(submodule => processSubmodule(submodule)))
-
-    console.log(`\n${icons.success} ${pc.bold(pc.green('All submodules processed successfully!'))}`)
     // Now process the main repository to track submodule updates
     await processRepository(rootDir, false)
 
