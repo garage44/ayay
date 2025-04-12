@@ -81,7 +81,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // For main repository, update submodule references
       if (!isSubmodule) {
-          console.log(pc.dim('updating submodule references...'))
+          console.log(pc.dim(' - updating submodule references...'))
 
           // Get list of submodules
           const submoduleResult = await git.raw(['submodule', 'status'])
@@ -97,7 +97,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
           // Process each submodule in parallel
           if (submoduleList.length > 0) {
-            console.log(pc.dim(`found ${submoduleList.length} submodules to update`))
+            console.log(pc.dim(` - found ${submoduleList.length} submodules to update`))
 
             // Process all submodules in parallel using Promise.all
             await Promise.all(submoduleList.map(async (submodulePath) => {
@@ -109,7 +109,7 @@ async function processRepository(repoPath, isSubmodule = false) {
                 // Checkout main and pull changes
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
-                console.log(`${icons.success} ${pc.dim(`submodule updated successfully: ${subName} `)}`)
+                console.log(` ${icons.success} ${pc.dim(`submodule updated successfully: ${subName} `)}`)
               } catch (submoduleError) {
                 console.error(`${icons.error} ${pc.red(`error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
               }
@@ -177,7 +177,7 @@ async function processSubmodule(submodulePath) {
 
       // Show changed files
       const summary = await git.diffSummary()
-      console.log(pc.dim(`- changes in submodule: ${subName} (${summary.files.length} files)`))
+      console.log(pc.dim(` - changes in submodule: ${subName} (${summary.files.length} files)`))
       summary.files.slice(0, 5).forEach(file => {
           console.log(pc.dim(`    • ${file.file} (${file.insertions}+ ${file.deletions}-)`))
       })
@@ -193,7 +193,7 @@ async function processSubmodule(submodulePath) {
       // Create commit with better error handling
       try {
           await git.commit(commitMessage)
-          console.log(`${pc.dim(`- created commit in ${subName}...`)}`)
+          console.log(`${pc.dim(` - created commit in ${subName}...`)}`)
       } catch (commitError) {
           console.error(`${icons.error} ${pc.red(`git commit failed in ${subName}:`)} ${commitError.message}`)
           throw commitError
