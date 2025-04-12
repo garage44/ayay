@@ -4,6 +4,12 @@ import fs from 'fs'
 import os from 'os'
 import simpleGit from 'simple-git'
 
+// Common git configuration options
+const gitConfig = {
+  binary: 'git',
+  maxConcurrentProcesses: 6,
+}
+
 // Try to load environment variables from multiple locations
 const envFiles = [
   path.join(process.cwd(), '.ayay'),
@@ -12,8 +18,8 @@ const envFiles = [
 
 for (const envFile of envFiles) {
   if (fs.existsSync(envFile)) {
-    require('dotenv').config({ path: envFile })
-    break
+      require('dotenv').config({ path: envFile })
+      break
   }
 }
 
@@ -55,7 +61,12 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // Change to repository directory
       process.chdir(repoPath)
-      const git = simpleGit()
+
+      // Initialize simple-git with configuration options
+      const git = simpleGit({
+        baseDir: repoPath,
+        ...gitConfig,
+      })
 
       // For main repository, update submodule references
       if (!isSubmodule) {
@@ -84,7 +95,12 @@ async function processRepository(repoPath, isSubmodule = false) {
                 // Move into the submodule directory
                 const originalDir = process.cwd()
                 process.chdir(path.join(repoPath, submodulePath))
-                const submoduleGit = simpleGit()
+
+                // Initialize simple-git with configuration options
+                const submoduleGit = simpleGit({
+                  baseDir: path.join(repoPath, submodulePath),
+                  ...gitConfig,
+                })
 
                 // Checkout main and pull changes
                 await submoduleGit.checkout('main')
@@ -142,7 +158,12 @@ async function processSubmodule(submodulePath) {
     try {
       // Change to submodule directory
       process.chdir(submodulePath)
-      const git = simpleGit()
+
+      // Initialize simple-git with configuration options
+      const git = simpleGit({
+        baseDir: submodulePath,
+        ...gitConfig,
+      })
 
       // Check if there are any changes
       const status = await git.status()
@@ -162,15 +183,8 @@ async function processSubmodule(submodulePath) {
       try {
         console.log(`Attempting to commit with message: "${commitMessage}"`)
 
-        // Check git configuration
-        try {
-          const config = await git.listConfig()
-          const userName = config.values['.git/config']['user.name']
-          const userEmail = config.values['.git/config']['user.email']
-          console.log(`Git user configured as: ${userName} <${userEmail}>`)
-        } catch (configError) {
-          console.error('Git user not configured properly:', configError.message)
-        }
+        // No need to check git user configuration separately
+        // simple-git will use the system's git configuration
 
         await git.commit(commitMessage)
       } catch (commitError) {
@@ -212,8 +226,8 @@ async function main() {
     // Process all submodules in parallel
     console.log('\nProcessing submodules in parallel...')
     await Promise.all(submodules.map(async (submodule) => {
-      await processSubmodule(submodule)
-      process.chdir(rootDir) // Return to root directory after each submodule
+        await processSubmodule(submodule)
+        process.chdir(rootDir) // Return to root directory after each submodule
     }))
 
     console.log('\nAll submodules processed successfully!')
@@ -222,8 +236,8 @@ async function main() {
     await processRepository(rootDir, false)
 
   } catch (error) {
-    console.error('Error:', error)
-    process.exit(1)
+      console.error('Error:', error)
+      process.exit(1)
   }
 }
 
