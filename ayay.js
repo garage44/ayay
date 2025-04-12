@@ -192,9 +192,8 @@ async function processSubmodule(submodulePath) {
       const commitMessage = await generateCommitMessage(diff)
       // Create commit with better error handling
       try {
-          console.log(`${pc.dim(`creating commit in ${subName}...`)}`)
           await git.commit(commitMessage)
-          console.log(`${icons.success} ${pc.green('commit created successfully')}`)
+          console.log(`${pc.dim(`- created commit in ${subName}...`)}`)
       } catch (commitError) {
           console.error(`${icons.error} ${pc.red(`git commit failed in ${subName}:`)} ${commitError.message}`)
           throw commitError
