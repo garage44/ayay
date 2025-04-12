@@ -111,17 +111,6 @@ async function processRepository(repoPath, isSubmodule = false) {
       // Create commit with better error handling
       try {
         console.log(`Attempting to commit with message: "${commitMessage}"`)
-
-        // Check git configuration
-        try {
-          const config = await git.listConfig()
-          const userName = config.values['.git/config']['user.name']
-          const userEmail = config.values['.git/config']['user.email']
-          console.log(`Git user configured as: ${userName} <${userEmail}>`)
-        } catch (configError) {
-          console.error('Git user not configured properly:', configError.message)
-        }
-
         await git.commit(commitMessage)
       } catch (commitError) {
         console.error('Git commit failed with error:')
