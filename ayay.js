@@ -59,7 +59,7 @@ async function generateCommitMessage(diff) {
 
       const data = await response.json()
       const message = data.content[0].text.trim()
-      console.log(`${icons.commit} ${pc.bold(`Commit message: ${pc.cyan(message)}`)}`)
+      console.log(`${icons.commit} ${pc.bold(`commit message: ${pc.cyan(message)}`)}`)
       return message
   } catch (error) {
       console.error(`${icons.error} ${pc.red('error generating commit message:')} ${error.message}`);
@@ -142,7 +142,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // Create commit with better error handling
       try {
-          console.log(`${icons.commit} ${pc.bold(`creating commit in ${repoName}...`)}`)
+          console.log(`${pc.dim(`committing in ${repoName}...`)}`)
           await git.commit(commitMessage)
       } catch (commitError) {
           console.error(`${icons.error} ${pc.red('git commit failed:')} ${commitError.message}`)
@@ -187,7 +187,6 @@ async function processSubmodule(submodulePath) {
 
       // Stage all changes
       await git.add('.')
-      console.log(pc.dim('all changes staged for commit'))
 
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
