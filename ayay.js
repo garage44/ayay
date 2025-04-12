@@ -105,19 +105,13 @@ async function processRepository(repoPath, isSubmodule = false) {
             await Promise.all(submoduleList.map(async (submodulePath) => {
               try {
                 const subName = path.basename(submodulePath)
-                console.log(pc.dim(`Updating submodule: ${subName}`))
-
                 // Create git instance with path - no need to change directory
-                const submoduleGit = simpleGit({
-                  baseDir: path.join(repoPath, submodulePath),
-                  ...gitConfig,
-                })
+                const submoduleGit = simpleGit({baseDir: path.join(repoPath, submodulePath), ...gitConfig})
 
                 // Checkout main and pull changes
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
-
-                console.log(`${icons.success} ${pc.green(`Submodule ${subName} updated successfully`)}`)
+                console.log(`${icons.success} ${pc.dim(`Submodule ${subName} updated successfully`)}`)
               } catch (submoduleError) {
                 console.error(`${icons.error} ${pc.red(`Error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
               }
@@ -256,7 +250,7 @@ async function main() {
     // Now process the main repository to track submodule updates
     await processRepository(rootDir, false)
 
-    console.log(`\n${icons.final} ${pc.bold(pc.green('AyAy Git Workflow completed successfully!'))}`);
+    console.log(`\n${icons.final} ${pc.bold(pc.green('AyAy you\'re all set!'))}`);
   } catch (error) {
     console.error(`\n${icons.error} ${pc.bold(pc.red('Error:'))} ${error.message}`)
     process.exit(1)
