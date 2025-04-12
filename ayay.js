@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-const { execSync } = require('child_process')
-const path = require('path')
-const fs = require('fs')
-const os = require('os')
+import { execSync } from 'child_process'
+import path from 'path'
+import fs from 'fs'
+import os from 'os'
 
 // Try to load environment variables from multiple locations
 const envFiles = [
