@@ -177,7 +177,7 @@ async function processSubmodule(submodulePath) {
 
       // Show changed files
       const summary = await git.diffSummary()
-      console.log(pc.dim(`- changes found in ${summary.files.length} files:`))
+      console.log(pc.dim(`- changes in submodule: ${subName} (${summary.files.length} files)`))
       summary.files.slice(0, 5).forEach(file => {
           console.log(pc.dim(`    • ${file.file} (${file.insertions}+ ${file.deletions}-)`))
       })
