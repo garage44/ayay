@@ -109,7 +109,7 @@ async function processRepository(repoPath, isSubmodule = false) {
                 // Checkout main and pull changes
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
-                console.log(`${icons.success} ${pc.dim(`  - submodule updated successfully: ${subName} `)}`)
+                console.log(`${icons.success} ${pc.dim(`submodule updated successfully: ${subName} `)}`)
               } catch (submoduleError) {
                 console.error(`${icons.error} ${pc.red(`error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
               }
@@ -168,7 +168,7 @@ async function processSubmodule(submodulePath) {
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(pc.dim(`  - no changes in submodule: ${subName}`))
+          console.log(pc.dim(` - no changes in submodule: ${subName}`))
           return
       }
 
