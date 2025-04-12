@@ -1,0 +1,13 @@
+{
+  "name": "git-submodule-updater",
+  "version": "1.0.0",
+  "description": "CLI tool to automatically update git submodules with AI-generated commit messages",
+  "main": "update-submodules.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node update-submodules.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
