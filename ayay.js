@@ -60,7 +60,7 @@ async function processRepository(repoPath, isSubmodule = false) {
       // For main repository, update submodule references
       if (!isSubmodule) {
           console.log('Updating submodule references...')
-          execSync('git submodule update --remote --merge', { stdio: 'inherit' })
+          execSync('git submodule foreach "git checkout main && git pull origin main"', { stdio: 'inherit' })
       }
 
       // Check if there are any changes
