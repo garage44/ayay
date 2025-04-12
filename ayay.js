@@ -78,7 +78,9 @@ async function processRepository(repoPath, isSubmodule = false) {
       const commitMessage = await generateCommitMessage(diff)
       // Create commit
       execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' })
-      console.log(`Successfully committed changes in ${repoType}`)
+      // Push changes to remote
+      execSync('git push origin main', { stdio: 'inherit' })
+      console.log(`Successfully committed and pushed changes in ${repoType}`)
   } catch (error) {
       console.error(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${repoPath}:`, error)
   }
@@ -106,7 +108,9 @@ async function processSubmodule(submodulePath) {
     const commitMessage = await generateCommitMessage(diff)
     // Create commit
     execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' })
-    console.log('Successfully committed changes')
+    // Push changes to remote
+    execSync('git push origin main', { stdio: 'inherit' })
+    console.log('Successfully committed and pushed changes')
 
   } catch (error) {
     console.error(`Error processing submodule ${submodulePath}:`, error)
