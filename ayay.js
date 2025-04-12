@@ -36,33 +36,31 @@ for (const envFile of envFiles) {
 
 async function generateCommitMessage(diff) {
   try {
-    console.log(pc.dim('Generating commit message with AI...'))
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': process.env.ANTHROPIC_API_KEY,
+              'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+              model: 'claude-3-haiku-20240307',
+              max_tokens: 300,
+              messages: [{
+                role: 'user',
+                content: `Generate a concise, descriptive git commit message for the following changes. Use conventional commits format. Only return the commit message, nothing else.\n\n${diff}`
+              }]
+          })
+      })
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 300,
-            messages: [{
-              role: 'user',
-              content: `Generate a concise, descriptive git commit message for the following changes. Use conventional commits format. Only return the commit message, nothing else.\n\n${diff}`
-            }]
-        })
-    })
+      if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+      }
 
-    if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const data = await response.json()
-    const message = data.content[0].text.trim()
-    console.log(`${icons.commit} ${pc.bold(`Commit message: ${pc.cyan(message)}`)}`)
-    return message
+      const data = await response.json()
+      const message = data.content[0].text.trim()
+      console.log(`${icons.commit} ${pc.bold(`Commit message: ${pc.cyan(message)}`)}`)
+      return message
   } catch (error) {
       console.error(`${icons.error} ${pc.red('Error generating commit message:')} ${error.message}`);
       return 'chore: update submodule changes'
@@ -170,7 +168,7 @@ async function processSubmodule(submodulePath) {
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(pc.dim(`- No changes in submodule ${subName}`))
+          console.log(pc.dim(`- No changes in submodule: ${subName}`))
           return
       }
 
@@ -179,12 +177,12 @@ async function processSubmodule(submodulePath) {
 
       // Show changed files
       const summary = await git.diffSummary()
-      console.log(pc.dim(`Changes detected in ${summary.files.length} files:`))
+      console.log(pc.dim(`- Changes found in ${summary.files.length} files:`))
       summary.files.slice(0, 5).forEach(file => {
-          console.log(pc.dim(`  • ${file.file} (${file.insertions}+ ${file.deletions}-)`))
+          console.log(pc.dim(`    • ${file.file} (${file.insertions}+ ${file.deletions}-)`))
       })
       if (summary.files.length > 5) {
-          console.log(pc.dim(`  • ...and ${summary.files.length - 5} more files`));
+          console.log(pc.dim(`    • ...and ${summary.files.length - 5} more files`));
       }
 
       // Stage all changes
@@ -231,8 +229,6 @@ async function main() {
       .map(name => path.join(packagesDir, name))
       .filter(dir => fs.statSync(dir).isDirectory())
 
-    // Process all submodules in parallel
-    console.log(pc.dim(`Processing ${submodules.length} submodules in parallel...`))
     // Execute all submodule operations completely in parallel
     await Promise.all(submodules.map(submodule => processSubmodule(submodule)))
     // Now process the main repository to track submodule updates
