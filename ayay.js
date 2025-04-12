@@ -62,8 +62,16 @@ async function processRepository(repoPath, isSubmodule = false) {
           console.log('Updating submodule references...')
 
           // Get list of submodules
-          const submoduleStatusResult = await git.submoduleStatus()
-          const submoduleList = Object.keys(submoduleStatusResult)
+          const submoduleResult = await git.raw(['submodule', 'status'])
+          const submoduleList = submoduleResult
+            .split('\n')
+            .filter(line => line.trim())
+            .map(line => {
+              // Extract submodule path from status line
+              const match = line.trim().match(/^\S+\s+(\S+)/)
+              return match ? match[1] : null
+            })
+            .filter(Boolean)
 
           // Process each submodule individually
           if (submoduleList.length > 0) {
