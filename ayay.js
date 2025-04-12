@@ -3,6 +3,24 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import simpleGit from 'simple-git'
+import pc from 'picocolors' // Add picocolors for colored output
+
+// Icons for status messages
+const icons = {
+  success: '✅',
+  info: 'ℹ️ ',
+  warning: '⚠️ ',
+  error: '❌',
+  processing: '🔄',
+  git: '🔀',
+  commit: '📝',
+  push: '🚀',
+  clean: '🧹',
+  update: '⬆️',
+  start: '🚦',
+  finish: '🏁',
+  submodule: '📦',
+}
 
 // Common git configuration options
 const gitConfig = {
@@ -25,6 +43,8 @@ for (const envFile of envFiles) {
 
 async function generateCommitMessage(diff) {
   try {
+    console.log(`${icons.processing} ${pc.blue('Generating commit message with AI...')}`)
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -47,9 +67,11 @@ async function generateCommitMessage(diff) {
     }
 
     const data = await response.json()
-    return data.content[0].text.trim()
+    const message = data.content[0].text.trim()
+    console.log(`${icons.commit} ${pc.green('Commit message:')} ${pc.cyan(message)}`)
+    return message
   } catch (error) {
-      console.error('Error generating commit message:', error);
+      console.error(`${icons.error} ${pc.red('Error generating commit message:')} ${error.message}`);
       return 'chore: update submodule changes'
   }
 }
@@ -57,10 +79,8 @@ async function generateCommitMessage(diff) {
 async function processRepository(repoPath, isSubmodule = false) {
   try {
       const repoType = isSubmodule ? 'submodule' : 'repository'
-      console.log(`\nProcessing ${repoType}: ${repoPath}`)
-
-      // Change to repository directory
-      process.chdir(repoPath)
+      const repoName = path.basename(repoPath)
+      console.log(`\n${icons.git} ${pc.bold(pc.blue(`Processing ${repoType}: ${pc.green(repoName)}`))}`);
 
       // Initialize simple-git with configuration options
       const git = simpleGit({
@@ -70,7 +90,7 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // For main repository, update submodule references
       if (!isSubmodule) {
-          console.log('Updating submodule references...')
+          console.log(`${icons.update} ${pc.yellow('Updating submodule references...')}`)
 
           // Get list of submodules
           const submoduleResult = await git.raw(['submodule', 'status'])
@@ -86,12 +106,13 @@ async function processRepository(repoPath, isSubmodule = false) {
 
           // Process each submodule in parallel
           if (submoduleList.length > 0) {
-            console.log(`Found ${submoduleList.length} submodules to update`)
+            console.log(`${icons.info} ${pc.blue(`Found ${pc.bold(submoduleList.length)} submodules to update`)}`)
 
             // Process all submodules in parallel using Promise.all
             await Promise.all(submoduleList.map(async (submodulePath) => {
               try {
-                console.log(`Updating submodule: ${submodulePath}`)
+                const subName = path.basename(submodulePath)
+                console.log(`${icons.submodule} ${pc.yellow(`Updating submodule: ${pc.cyan(subName)}`)}`)
 
                 // Create git instance with path - no need to change directory
                 const submoduleGit = simpleGit({
@@ -103,51 +124,60 @@ async function processRepository(repoPath, isSubmodule = false) {
                 await submoduleGit.checkout('main')
                 await submoduleGit.pull('origin', 'main')
 
-                console.log(`Successfully updated submodule: ${submodulePath}`)
+                console.log(`${icons.success} ${pc.green(`Submodule ${pc.bold(subName)} updated successfully`)}`)
               } catch (submoduleError) {
-                console.error(`Error updating submodule ${submodulePath}:`, submoduleError)
+                console.error(`${icons.error} ${pc.red(`Error updating submodule ${path.basename(submodulePath)}:`)} ${submoduleError.message}`)
               }
             }));
           } else {
-            console.log('No submodules found to update')
+            console.log(`${icons.info} ${pc.blue('No submodules found to update')}`)
           }
       }
 
       // Check if there are any changes
       const status = await git.status()
       if (status.isClean()) {
-          console.log(`No changes in this ${repoType}`);
+          console.log(`${icons.clean} ${pc.gray(`No changes in ${repoType} ${pc.bold(repoName)}`)}`)
           return
       }
 
       // Get the diff for commit message generation
       const diff = await git.diff()
+
+      // Get files that have been changed
+      const summary = await git.diffSummary()
+      console.log(`${icons.info} ${pc.blue(`Changes detected in ${pc.bold(summary.files.length)} files`)}`)
+
       // Stage all changes
       await git.add('.')
+      console.log(`${icons.success} ${pc.green('All changes staged for commit')}`)
+
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
 
       // Create commit with better error handling
       try {
-        console.log(`Attempting to commit with message: "${commitMessage}"`)
+        console.log(`${icons.commit} ${pc.magenta(`Creating commit in ${pc.bold(repoName)}...`)}`)
         await git.commit(commitMessage)
+        console.log(`${icons.success} ${pc.green('Commit created successfully')}`)
       } catch (commitError) {
-        console.error('Git commit failed with error:')
-        console.error(commitError.message)
+        console.error(`${icons.error} ${pc.red('Git commit failed:')} ${commitError.message}`)
         throw commitError
       }
 
       // Push changes to remote
+      console.log(`${icons.push} ${pc.blue('Pushing changes to remote...')}`)
       await git.push('origin', 'main')
-      console.log(`Successfully committed and pushed changes in ${repoType}`)
+      console.log(`${icons.success} ${pc.bold(pc.green(`Changes in ${repoName} committed and pushed successfully`))}`)
   } catch (error) {
-      console.error(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${repoPath}:`, error)
+      console.error(`${icons.error} ${pc.red(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${path.basename(repoPath)}:`)} ${error.message}`)
   }
 }
 
 async function processSubmodule(submodulePath) {
   try {
-    console.log(`\nProcessing submodule: ${submodulePath}`)
+    const subName = path.basename(submodulePath)
+    console.log(`\n${icons.submodule} ${pc.bold(pc.cyan(`Processing submodule: ${pc.green(subName)}`))}`)
 
     // Create git instance with path - no need to change directory
     const git = simpleGit({
@@ -158,43 +188,60 @@ async function processSubmodule(submodulePath) {
     // Check if there are any changes
     const status = await git.status()
     if (status.isClean()) {
-        console.log(`No changes in submodule: ${submodulePath}`);
+        console.log(`${icons.clean} ${pc.gray(`No changes in submodule ${pc.bold(subName)}`)}`)
         return
     }
 
     // Get the diff for commit message generation
     const diff = await git.diff()
+
+    // Show changed files
+    const summary = await git.diffSummary()
+    console.log(`${icons.info} ${pc.blue(`Changes detected in ${pc.bold(summary.files.length)} files:`)}`)
+    summary.files.slice(0, 5).forEach(file => {
+      console.log(`  ${pc.gray('•')} ${pc.cyan(file.file)} ${pc.gray(`(${file.insertions}+ ${file.deletions}-)`)}`)
+    })
+    if (summary.files.length > 5) {
+      console.log(`  ${pc.gray('•')} ${pc.gray(`...and ${summary.files.length - 5} more files`)}`);
+    }
+
     // Stage all changes
     await git.add('.')
+    console.log(`${icons.success} ${pc.green('All changes staged for commit')}`)
+
     // Generate commit message using Anthropic
     const commitMessage = await generateCommitMessage(diff)
 
     // Create commit with better error handling
     try {
-      console.log(`Committing changes in ${submodulePath}: "${commitMessage}"`)
+      console.log(`${icons.commit} ${pc.magenta(`Creating commit in ${pc.bold(subName)}...`)}`)
       await git.commit(commitMessage)
+      console.log(`${icons.success} ${pc.green('Commit created successfully')}`)
     } catch (commitError) {
-      console.error(`Git commit failed in ${submodulePath}:`, commitError.message)
+      console.error(`${icons.error} ${pc.red(`Git commit failed in ${subName}:`)} ${commitError.message}`)
       throw commitError
     }
 
     // Push changes to remote
+    console.log(`${icons.push} ${pc.blue('Pushing changes to remote...')}`)
     await git.push('origin', 'main')
-    console.log(`Successfully committed and pushed changes in ${submodulePath}`)
+    console.log(`${icons.success} ${pc.bold(pc.green(`Changes in ${subName} committed and pushed successfully`))}`)
   } catch (error) {
-    console.error(`Error processing submodule ${submodulePath}:`, error)
+    console.error(`${icons.error} ${pc.red(`Error processing submodule ${path.basename(submodulePath)}:`)} ${error.message}`)
   }
 }
 
 async function main() {
   try {
+    console.log(`\n${icons.start} ${pc.bold(pc.green('Starting AyAy Git Workflow'))}`);
+
     // Get the root directory
     const rootDir = process.cwd()
     const packagesDir = path.join(rootDir, 'packages')
 
     // Check if packages directory exists
     if (!fs.existsSync(packagesDir)) {
-      console.error('Packages directory not found!')
+      console.error(`${icons.error} ${pc.red('Packages directory not found!')}`)
       process.exit(1)
     }
 
@@ -204,20 +251,21 @@ async function main() {
       .filter(dir => fs.statSync(dir).isDirectory())
 
     // Process all submodules in parallel
-    console.log(`\nProcessing ${submodules.length} submodules in parallel...`)
+    console.log(`${icons.processing} ${pc.bold(pc.blue(`Processing ${pc.cyan(submodules.length)} submodules in parallel...`))}`);
 
     // Execute all submodule operations completely in parallel
     await Promise.all(
       submodules.map(submodule => processSubmodule(submodule))
     );
 
-    console.log('\nAll submodules processed in parallel successfully!')
+    console.log(`\n${icons.success} ${pc.bold(pc.green('All submodules processed successfully!'))}`);
 
     // Now process the main repository to track submodule updates
     await processRepository(rootDir, false)
 
+    console.log(`\n${icons.finish} ${pc.bold(pc.green('AyAy Git Workflow completed successfully!'))}`);
   } catch (error) {
-    console.error('Error:', error)
+    console.error(`\n${icons.error} ${pc.bold(pc.red('Error:'))} ${error.message}`)
     process.exit(1)
   }
 }
