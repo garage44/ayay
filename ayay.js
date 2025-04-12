@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { exec, execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
+import simpleGit from 'simple-git'
 
 // Try to load environment variables from multiple locations
 const envFiles = [
@@ -48,18 +48,6 @@ async function generateCommitMessage(diff) {
   }
 }
 
-async function execAsync(command, options = {}) {
-  return new Promise((resolve, reject) => {
-    exec(command, { ...options, stdio: 'inherit' }, (error, stdout, stderr) => {
-      if (error) {
-        reject(error)
-        return
-      }
-      resolve({ stdout, stderr })
-    })
-  })
-}
-
 async function processRepository(repoPath, isSubmodule = false) {
   try {
       const repoType = isSubmodule ? 'submodule' : 'repository'
@@ -67,37 +55,87 @@ async function processRepository(repoPath, isSubmodule = false) {
 
       // Change to repository directory
       process.chdir(repoPath)
+      const git = simpleGit()
 
       // For main repository, update submodule references
       if (!isSubmodule) {
           console.log('Updating submodule references...')
-          await execAsync('git submodule foreach "git checkout main && git pull origin main"')
+
+          // Get list of submodules
+          const submoduleStatusResult = await git.submoduleStatus()
+          const submoduleList = Object.keys(submoduleStatusResult)
+
+          // Process each submodule individually
+          if (submoduleList.length > 0) {
+            console.log(`Found ${submoduleList.length} submodules to update`)
+
+            for (const submodulePath of submoduleList) {
+              try {
+                console.log(`Updating submodule: ${submodulePath}`)
+
+                // Move into the submodule directory
+                const originalDir = process.cwd()
+                process.chdir(path.join(repoPath, submodulePath))
+                const submoduleGit = simpleGit()
+
+                // Checkout main and pull changes
+                await submoduleGit.checkout('main')
+                await submoduleGit.pull('origin', 'main')
+
+                // Return to the original directory
+                process.chdir(originalDir)
+                console.log(`Successfully updated submodule: ${submodulePath}`)
+              } catch (submoduleError) {
+                console.error(`Error updating submodule ${submodulePath}:`, submoduleError)
+              }
+            }
+          } else {
+            console.log('No submodules found to update')
+          }
       }
 
       // Check if there are any changes
-      const status = execSync('git status --porcelain').toString()
-      if (!status) {
+      const status = await git.status()
+      if (status.isClean()) {
           console.log(`No changes in this ${repoType}`);
           return
       }
 
       // Get the diff for commit message generation
-      const diff = execSync('git diff').toString()
+      const diff = await git.diff()
       // Stage all changes
-      await execAsync('git add -A')
+      await git.add('.')
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
-      // Create commit
-      const result = execSync(`git commit -m "${commitMessage}"`)
-      console.log(result)
+
+      // Create commit with better error handling
+      try {
+        console.log(`Attempting to commit with message: "${commitMessage}"`)
+
+        // Check git configuration
+        try {
+          const config = await git.listConfig()
+          const userName = config.values['.git/config']['user.name']
+          const userEmail = config.values['.git/config']['user.email']
+          console.log(`Git user configured as: ${userName} <${userEmail}>`)
+        } catch (configError) {
+          console.error('Git user not configured properly:', configError.message)
+        }
+
+        await git.commit(commitMessage)
+      } catch (commitError) {
+        console.error('Git commit failed with error:')
+        console.error(commitError.message)
+        throw commitError
+      }
+
       // Push changes to remote
-      await execAsync('git push origin main')
+      await git.push('origin', 'main')
       console.log(`Successfully committed and pushed changes in ${repoType}`)
   } catch (error) {
       console.error(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${repoPath}:`, error)
   }
 }
-
 
 async function processSubmodule(submodulePath) {
   try {
@@ -107,24 +145,45 @@ async function processSubmodule(submodulePath) {
     try {
       // Change to submodule directory
       process.chdir(submodulePath)
+      const git = simpleGit()
 
       // Check if there are any changes
-      const status = execSync('git status --porcelain').toString();
-      if (!status) {
+      const status = await git.status()
+      if (status.isClean()) {
           console.log('No changes in this submodule');
           return
       }
 
       // Get the diff for commit message generation
-      const diff = execSync('git diff').toString()
+      const diff = await git.diff()
       // Stage all changes
-      await execAsync('git add -A')
+      await git.add('.')
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
-      // Create commit
-      await execAsync(`git commit -m "${commitMessage}"`)
+
+      // Create commit with better error handling
+      try {
+        console.log(`Attempting to commit with message: "${commitMessage}"`)
+
+        // Check git configuration
+        try {
+          const config = await git.listConfig()
+          const userName = config.values['.git/config']['user.name']
+          const userEmail = config.values['.git/config']['user.email']
+          console.log(`Git user configured as: ${userName} <${userEmail}>`)
+        } catch (configError) {
+          console.error('Git user not configured properly:', configError.message)
+        }
+
+        await git.commit(commitMessage)
+      } catch (commitError) {
+        console.error('Git commit failed with error:')
+        console.error(commitError.message)
+        throw commitError
+      }
+
       // Push changes to remote
-      await execAsync('git push origin main')
+      await git.push('origin', 'main')
       console.log('Successfully committed and pushed changes')
     } finally {
       // Always return to original directory
