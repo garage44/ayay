@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process'
+import { exec, execSync } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import os from 'os'
@@ -48,6 +48,17 @@ async function generateCommitMessage(diff) {
   }
 }
 
+async function execAsync(command, options = {}) {
+  return new Promise((resolve, reject) => {
+    exec(command, { ...options, stdio: 'inherit' }, (error, stdout, stderr) => {
+      if (error) {
+        reject(error)
+        return
+      }
+      resolve({ stdout, stderr })
+    })
+  })
+}
 
 async function processRepository(repoPath, isSubmodule = false) {
   try {
@@ -60,7 +71,7 @@ async function processRepository(repoPath, isSubmodule = false) {
       // For main repository, update submodule references
       if (!isSubmodule) {
           console.log('Updating submodule references...')
-          execSync('git submodule foreach "git checkout main && git pull origin main"', { stdio: 'inherit' })
+          await execAsync('git submodule foreach "git checkout main && git pull origin main"')
       }
 
       // Check if there are any changes
@@ -73,13 +84,14 @@ async function processRepository(repoPath, isSubmodule = false) {
       // Get the diff for commit message generation
       const diff = execSync('git diff').toString()
       // Stage all changes
-      execSync('git add -A')
+      await execAsync('git add -A')
       // Generate commit message using Anthropic
       const commitMessage = await generateCommitMessage(diff)
       // Create commit
-      execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' })
+      const result = execSync(`git commit -m "${commitMessage}"`)
+      console.log(result)
       // Push changes to remote
-      execSync('git push origin main', { stdio: 'inherit' })
+      await execAsync('git push origin main')
       console.log(`Successfully committed and pushed changes in ${repoType}`)
   } catch (error) {
       console.error(`Error processing ${isSubmodule ? 'submodule' : 'repository'} ${repoPath}:`, error)
@@ -90,27 +102,34 @@ async function processRepository(repoPath, isSubmodule = false) {
 async function processSubmodule(submodulePath) {
   try {
     console.log(`\nProcessing submodule: ${submodulePath}`)
-    // Change to submodule directory
-    process.chdir(submodulePath)
+    const originalDir = process.cwd()
 
-    // Check if there are any changes
-    const status = execSync('git status --porcelain').toString();
-    if (!status) {
-        console.log('No changes in this submodule');
-        return
+    try {
+      // Change to submodule directory
+      process.chdir(submodulePath)
+
+      // Check if there are any changes
+      const status = execSync('git status --porcelain').toString();
+      if (!status) {
+          console.log('No changes in this submodule');
+          return
+      }
+
+      // Get the diff for commit message generation
+      const diff = execSync('git diff').toString()
+      // Stage all changes
+      await execAsync('git add -A')
+      // Generate commit message using Anthropic
+      const commitMessage = await generateCommitMessage(diff)
+      // Create commit
+      await execAsync(`git commit -m "${commitMessage}"`)
+      // Push changes to remote
+      await execAsync('git push origin main')
+      console.log('Successfully committed and pushed changes')
+    } finally {
+      // Always return to original directory
+      process.chdir(originalDir)
     }
-
-    // Get the diff for commit message generation
-    const diff = execSync('git diff').toString()
-    // Stage all changes
-    execSync('git add -A')
-    // Generate commit message using Anthropic
-    const commitMessage = await generateCommitMessage(diff)
-    // Create commit
-    execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' })
-    // Push changes to remote
-    execSync('git push origin main', { stdio: 'inherit' })
-    console.log('Successfully committed and pushed changes')
 
   } catch (error) {
     console.error(`Error processing submodule ${submodulePath}:`, error)
@@ -129,16 +148,17 @@ async function main() {
       process.exit(1)
     }
 
-    // Get all submodules in packages directory
+    // Get all submodules in packages directory, excluding current package
     const submodules = fs.readdirSync(packagesDir)
       .map(name => path.join(packagesDir, name))
       .filter(dir => fs.statSync(dir).isDirectory())
 
-    // Process each submodule first
-    for (const submodule of submodules) {
+    // Process all submodules in parallel
+    console.log('\nProcessing submodules in parallel...')
+    await Promise.all(submodules.map(async (submodule) => {
       await processSubmodule(submodule)
-      process.chdir(rootDir) // Return to root directory
-    }
+      process.chdir(rootDir) // Return to root directory after each submodule
+    }))
 
     console.log('\nAll submodules processed successfully!')
 
