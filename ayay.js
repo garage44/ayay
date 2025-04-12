@@ -6,8 +6,8 @@ import os from 'os'
 
 // Try to load environment variables from multiple locations
 const envFiles = [
-  path.join(process.cwd(), '.workspace-commit'),
-  path.join(os.homedir(), '.workspace-commit')
+  path.join(process.cwd(), '.ayay'),
+  path.join(os.homedir(), '.ayay')
 ];
 
 for (const envFile of envFiles) {
