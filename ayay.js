@@ -50,8 +50,11 @@ async function generateCommitMessage(diff) {
                 role: 'user',
                 content: `Generate a concise, descriptive git commit message for the following changes. Use conventional commits format.
 In the diff, lines starting with '-' were removed and lines starting with '+' were added.
-IMPORTANT: Do NOT include the diff in your response. Only return the commit message itself, formatted as a conventional commit.
-For example, if you see a removal, use "remove" or "delete" in the message, not "add".
+IMPORTANT:
+- Do NOT include the diff in your response
+- Do NOT include any headers, prefixes, or labels like "AI:" or "Commit message:"
+- Only return the commit message itself, formatted as a conventional commit
+- For removals, use "remove" or "delete" in the message, not "add"
 
 ${diff}`
               }]
