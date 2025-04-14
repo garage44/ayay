@@ -44,14 +44,16 @@ async function generateCommitMessage(diff) {
               'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
-              model: 'claude-3-haiku-20240307',
-              max_tokens: 300,
+              model: 'claude-3-7-sonnet-latest',
+              max_tokens: 3000,
               messages: [{
                 role: 'user',
-                content: `
-                Generate a concise, descriptive git commit message for the following changes. Use conventional commits format.
-                In the diff, lines starting with '-' were removed and lines starting with '+' were added. Only return the commit message,
-                nothing else.\n\n${diff}`
+                content: `Generate a concise, descriptive git commit message for the following changes. Use conventional commits format.
+In the diff, lines starting with '-' were removed and lines starting with '+' were added.
+IMPORTANT: Do NOT include the diff in your response. Only return the commit message itself, formatted as a conventional commit.
+For example, if you see a removal, use "remove" or "delete" in the message, not "add".
+
+${diff}`
               }]
           })
       })
