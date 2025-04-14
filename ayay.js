@@ -51,7 +51,7 @@ async function generateCommitMessage(diff) {
                 content: `Generate a git commit message in conventional commits format for these changes.
 Format:
 - Title: One line, under 50 chars, conventional commit type (feat, fix, chore, etc.)
-- Body: Detailed explanation of what changed and why, separated by a blank line
+- Body: Detailed explanation of what changed and why, wrapped at 72 chars
 - No AI-related text or explanations in the response
 
 ${diff}`
