@@ -48,7 +48,10 @@ async function generateCommitMessage(diff) {
               max_tokens: 300,
               messages: [{
                 role: 'user',
-                content: `Generate a concise, descriptive git commit message for the following changes. Use conventional commits format. Only return the commit message, nothing else.\n\n${diff}`
+                content: `
+                Generate a concise, descriptive git commit message for the following changes. Use conventional commits format.
+                In the diff, lines starting with '-' were removed and lines starting with '+' were added. Only return the commit message,
+                nothing else.\n\n${diff}`
               }]
           })
       })
